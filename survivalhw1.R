@@ -32,9 +32,10 @@ count(pumps[pumps$reason==3,])/count(pumps[pumps$survive==0,])
 count(pumps[pumps$reason==4,])/count(pumps[pumps$survive==0,])
 
 # Set up the survival analysis
-with(pumps, Surv(time=hour, event = survive == 0))
+pumps$fail <- ifelse(pumps$survive==0,1,0)
+with(pumps, Surv(time=hour, event = fail == 1))
 
-pumps_fit <- survfit(Surv(hour, survive==0) ~ 1, data=pumps)
+pumps_fit <- survfit(Surv(hour, fail==1) ~ 1, data=pumps)
 pumps_fit
 summary(pumps_fit)
 
@@ -42,7 +43,22 @@ summary(pumps_fit)
 ggsurvplot(pumps_fit, data=pumps, conf.int=F, palette='grey')
 
 # By failure reason
-pumps_reason <- survfit(Surv(hour, survive==0) ~ reason, data=pumps)
+pumps_reason <- survfit(Surv(hour, fail==1) ~ reason, data=pumps)
 
 # Plot
 ggsurvplot(pumps_reason, data=pumps, conf.int=F,palette='grey')
+
+# Log-rank test
+pairwise_survdiff(Surv(time=hour, event=fail) ~ reason, data=pumps[pumps$reason != 0,])
+
+# Hazard plots
+pumps$hour2 <- ifelse(pumps$hour==48 & pumps$fail==0, 49, pumps$hour)
+
+pumps_haz <- with(pumps, kphaz.fit(hour2,fail))
+
+kphaz.plot(pumps_haz, main = "hazard function")
+
+# Cumulative hazard plot
+ggsurvplot(pumps_fit, fun = "cumhaz", palette = "grey")
+# Cumulative hazard plot stratifid
+ggsurvplot(pumps_reason, fun = 'cumhaz', palette = 'grey')
