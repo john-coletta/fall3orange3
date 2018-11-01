@@ -30,3 +30,19 @@ count(pumps[pumps$reason==2,])/count(pumps[pumps$survive==0,])
 count(pumps[pumps$reason==3,])/count(pumps[pumps$survive==0,])
 # Jammed (reason = 4)
 count(pumps[pumps$reason==4,])/count(pumps[pumps$survive==0,])
+
+# Set up the survival analysis
+with(pumps, Surv(time=hour, event = survive == 0))
+
+pumps_fit <- survfit(Surv(hour, survive==0) ~ 1, data=pumps)
+pumps_fit
+summary(pumps_fit)
+
+# Plotting below
+ggsurvplot(pumps_fit, data=pumps, conf.int=F, palette='grey')
+
+# By failure reason
+pumps_reason <- survfit(Surv(hour, survive==0) ~ reason, data=pumps)
+
+# Plot
+ggsurvplot(pumps_reason, data=pumps, conf.int=F,palette='grey')
