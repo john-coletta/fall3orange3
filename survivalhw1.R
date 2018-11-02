@@ -65,7 +65,7 @@ pumps$hour2 <- ifelse(pumps$hour==48 & pumps$fail==0, 49, pumps$hour)
 pumps_haz <- with(pumps, kphaz.fit(hour2,fail))
 pumps_haz2 <- with(pumps, kphaz.fit(hour,fail))
 
-kphaz.plot(pumps_haz, main = "hazard function")
+kphaz.plot(pumps_haz, main = "Hazard Function for New Orleans' Wells")
 kphaz.plot(pumps_haz2, main= 'hazard function')
 # Cumulative hazard plot
 ggsurvplot(pumps_fit, fun = "cumhaz", palette = "Blues",
