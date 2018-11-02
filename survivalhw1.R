@@ -48,7 +48,7 @@ pumps_reason <- survfit(Surv(hour, fail==1) ~ reason, data=pumps)
 pumps_reason_no_survive <- survfit(Surv(hour, fail==1) ~ reason, data=pumps[pumps$reason != 0,])
 
 # Plot
-ggsurvplot(pumps_reason, data=pumps, conf.int=F,palette='Blues',
+ggsurvplot(pumps_reason, data=pumps, conf.int=F,palette='hue',
            title="Survival Plot for New Orleans' Wells",
            ggtheme=theme_minimal(),
            xlab='Hour',
@@ -68,12 +68,17 @@ pumps_haz2 <- with(pumps, kphaz.fit(hour,fail))
 kphaz.plot(pumps_haz, main = "Hazard Function for New Orleans' Wells")
 kphaz.plot(pumps_haz2, main= 'hazard function')
 # Cumulative hazard plot
-ggsurvplot(pumps_fit, fun = "cumhaz", palette = "Blues",
+ggsurvplot(pumps_fit, fun = "cumhaz", palette = "hue",
            ggtheme=theme_minimal(),
            title="Cumulative Hazard Plot for New Orleans' Wells",
            xlab='Hour',ylab='Cumulative Hazard',
            legend.labs='All Wells')
 # Cumulative hazard plot stratifid
-ggsurvplot(pumps_reason, fun = 'cumhaz', palette = 'grey')
+ggsurvplot(pumps_reason, fun = 'cumhaz', palette = 'hue',
+           title="Stratified Cumulative Hazard Plot for New Orleans' Wells",
+           xlab='Hour',
+           ylab='Cumulative Hazard',
+           legend.labs=c('Survived','Flooded','Motor Failure','Surge','Jammed'),
+           ggtheme=theme_minimal())
 ggsurvplot(pumps_reason_no_survive, fun='cumhaz', palette='grey')
 
