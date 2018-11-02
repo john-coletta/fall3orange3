@@ -67,7 +67,10 @@ pumps_haz2 <- with(pumps, kphaz.fit(hour,fail))
 kphaz.plot(pumps_haz, main = "hazard function")
 kphaz.plot(pumps_haz2, main= 'hazard function')
 # Cumulative hazard plot
-ggsurvplot(pumps_fit, fun = "cumhaz", palette = "grey")
+ggsurvplot(pumps_fit, fun = "cumhaz", palette = "grey",
+           title="Cumulative Hazard Plot for New Orleans' Wells",
+           xlab='Hour',ylab='Cumulative Hazard',
+           legend.labs='All Wells')
 # Cumulative hazard plot stratifid
 ggsurvplot(pumps_reason, fun = 'cumhaz', palette = 'grey')
 ggsurvplot(pumps_reason_no_survive, fun='cumhaz', palette='grey')
