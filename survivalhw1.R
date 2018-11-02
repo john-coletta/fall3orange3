@@ -45,8 +45,15 @@ ggsurvplot(pumps_fit, data=pumps, conf.int=F, palette='grey')
 # By failure reason
 pumps_reason <- survfit(Surv(hour, fail==1) ~ reason, data=pumps)
 
+pumps_reason_no_survive <- survfit(Surv(hour, fail==1) ~ reason, data=pumps[pumps$reason != 0,])
+
 # Plot
-ggsurvplot(pumps_reason, data=pumps, conf.int=F,palette='grey')
+ggsurvplot(pumps_reason, data=pumps, conf.int=F,palette='hue',
+           title="Survival Plot for New Orleans' Wells",
+           xlab='Hour',
+           ylab='Survival Probability',
+           legend.labs=c('Survived','Flooded','Motor Failure','Surge','Jammed'))
+ggsurvplot(pumps_reason_no_survive, data=pumps[pumps$reason != 0,], conf.int=F, palette='grey')
 
 # Log-rank test
 pairwise_survdiff(Surv(time=hour, event=fail) ~ reason, data=pumps[pumps$reason != 0,])
@@ -55,10 +62,13 @@ pairwise_survdiff(Surv(time=hour, event=fail) ~ reason, data=pumps[pumps$reason 
 pumps$hour2 <- ifelse(pumps$hour==48 & pumps$fail==0, 49, pumps$hour)
 
 pumps_haz <- with(pumps, kphaz.fit(hour2,fail))
+pumps_haz2 <- with(pumps, kphaz.fit(hour,fail))
 
 kphaz.plot(pumps_haz, main = "hazard function")
-
+kphaz.plot(pumps_haz2, main= 'hazard function')
 # Cumulative hazard plot
 ggsurvplot(pumps_fit, fun = "cumhaz", palette = "grey")
 # Cumulative hazard plot stratifid
 ggsurvplot(pumps_reason, fun = 'cumhaz', palette = 'grey')
+ggsurvplot(pumps_reason_no_survive, fun='cumhaz', palette='grey')
+
