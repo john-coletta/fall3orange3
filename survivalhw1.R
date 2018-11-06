@@ -96,11 +96,7 @@ kphaz.plot(pumps_haz2, main= 'hazard function')
 # Cumulative hazard plot
 ggsurvplot(pumps_fit, fun = "cumhaz", palette = "#377EB8",
            ggtheme=theme_minimal(),
-<<<<<<< HEAD
            title="Cumulative Hazard Plot: All Pumps",
-=======
-           title="Cumulative Hazard Plot for All Pumps",
->>>>>>> eabf7f41ec792bd2ae4cd086b5a2cfb18b3deb0b
            xlab='Hour',ylab='Cumulative Hazard',
            legend.labs='All Wells',
            break.x.by=5, xlim=c(0,50))
@@ -113,11 +109,7 @@ ggsurvplot(pumps_fit, fun = "cumhaz", palette = "#377EB8",
 #            ggtheme=theme_minimal())
 ggsurvplot(pumps_reason_no_survive, fun='cumhaz', palette=brewer.pal(4, "Set1"),
            ggtheme=theme_minimal(),
-<<<<<<< HEAD
            title="Cumulative Hazard Plot by Failure Condition",
-=======
-           title="Cumulative Hazard Plot by Failure Condition for Pumps",
->>>>>>> eabf7f41ec792bd2ae4cd086b5a2cfb18b3deb0b
            xlab='Hour',ylab='Cumulative Hazard',
            legend.labs=c('Flooded','Motor Failure','Surge','Jammed'),
            break.x.by=5, xlim=c(0,50))
