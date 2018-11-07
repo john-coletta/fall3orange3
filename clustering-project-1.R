@@ -55,6 +55,16 @@ complete$avg <- scale(complete$avg)
 #    lat[ii] <- as.numeric(latLon[2])
 #}
 listing_k <-data.frame(listing_id = listings$id, lat = lat, lon = lon)
+
+combined <- complete %>% left_join(listing_k,by='listing_id')
+combined$std.lat <- scale(combined$lat)
+combined$std.lon <- scale(combined$lon)
+
+toc <- cbind(combined$avg,combined$std.lat,combined$std.lon)
+
+clusters.c <- hclust(dist(toc),method='complete')
+clusters.a <- hclust(dist(toc),method='average')
+clusters.s <- hclust(dist(toc),method='single')
 #########################################
 # Get a Map of Seattle
 #########################################
