@@ -65,6 +65,8 @@ toc <- cbind(combined$avg,combined$std.lat,combined$std.lon)
 clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
 clusters.s <- hclust(dist(toc),method='single')
+
+plot(clusters.c)
 #########################################
 # Get a Map of Seattle
 #########################################
@@ -84,5 +86,14 @@ ggmap(map, fullpage = TRUE) +
 ggmap(map2, fullpage = TRUE) +
   geom_point(data = cluster, aes(x = lon, y = lat), color = 'red', size = 2)
 
+
+### BELOW CODE IS FOR WORD CLOUD ###
+words <- new_reviews %>% ungroup() %>% right_join(,by='listing_id') %>%
+  select(word) %>% count(word, sort=T) %>% filter(n<150)
+
+library(wordcloud)
+wordcloud(words = words$word, freq=words$n, min.freq = 150,
+          max.words=100, random.order=F, rot.per=0.35,
+          colors=brewer.pal(8, 'Dark2'))
 
 
