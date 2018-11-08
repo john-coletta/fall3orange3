@@ -70,26 +70,25 @@ clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
 clusters.s <- hclust(dist(toc),method='single')
 
+# The dendograms looked pretty garbage so let's use kmeans
 library(factoextra)
 library(mclust)
 fviz_nbclust(toc, kmeans, method='wss')
 fviz_nbclust(toc, kmeans, method='gap')
 fviz_nbclust(toc, kmeans, method='silhouette')
 
+# Four looks decent?
 kmeans_4 <- kmeans(toc,4)
 
 
-combined$clus <- kmeans_4$cluster
+combined$clus <- as.factor(kmeans_4$cluster)
 #########################################
-# Get a Map of Boston
+# Get a Map of Boston (uses stamenmap instead of google)
 #########################################
-boston <- get_stamenmap(bbox=c(left=-71.201596,bottom=42.221039,right=-70.871457,top=42.398561),zoom=12)
+boston <- get_stamenmap(bbox=c(left=-71.201596,bottom=42.221039,right=-70.941457,top=42.398561),zoom=12)
 ggmap(boston)
-#map <- get_map(location = "Seattle", zoom = 12)
-#map2 <- get_map(location = "Seattle", zoom = 11)
 
-#I want to find the Geo-location of these listings :-)
-
+# Filter the properites to their clusters
 clu1 <- combined %>% filter(clus==1)
 clu2 <- combined %>% filter(clus==2)
 clu3 <- combined %>% filter(clus==3)
@@ -97,15 +96,15 @@ clu4 <- combined %>% filter(clus==4)
 
 
 
-ggmap(boston, fullpage = TRUE) +
-  geom_point(data=clu1, aes(x=lon,y=lat),color='black',size=2) +
-  geom_point(data=clu2, aes(x=lon,y=lat),color='green',size=2) +
-  geom_point(data = clu3, aes(x = lon, y = lat), color = 'red', size = 2) +
-  geom_point(data= clu4, aes(x=lon, y=lat), color='blue', size=2)
+ggmap(boston, fullpage = TRUE,alpha=0.7) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=clus),size=2) +
+  scale_color_discrete()
 
 
 
 ### BELOW CODE IS FOR WORD CLOUD ###
+
+# First get the words for each cluster
 words1 <- new_reviews %>% ungroup() %>% right_join(clu1,by='listing_id') %>%
   select(word) %>% count(word, sort=T) %>% filter(n<150)
 
@@ -118,6 +117,7 @@ words3 <- new_reviews %>% ungroup() %>% right_join(clu3,by='listing_id') %>%
 words4 <- new_reviews %>% ungroup() %>% right_join(clu4,by='listing_id') %>%
   select(word) %>% count(word, sort=T) %>% filter(n<150)
 
+# Now plot the words
 library(wordcloud)
 wordcloud(words = words1$word, freq=words1$n, min.freq = 150,
           max.words=100, random.order=F, rot.per=0.35,
@@ -135,5 +135,27 @@ wordcloud(words = words4$word, freq=words4$n, min.freq = 150,
           max.words=100, random.order=F, rot.per=0.35,
           colors=brewer.pal(8, 'Dark2'))
 
+### BELOW IS THE MCLUST CODE ###
 
+# Add back in the distributions
+toc_dist <- combined[,c('sscore','lat','lon')]
+mm_bic <- mclustBIC(toc_dist)
+summary(mm_bic)
+mclustF <- Mclust(toc_dist,G=9)
+plot(mclustF)
+
+combined$mclust <- as.factor(mclustF$classification)
+
+mclu1 <- combined %>% filter(mclust==1)
+mclu2 <- combined %>% filter(mclust==2)
+mclu3 <- combined %>% filter(mclust==3)
+mclu4 <- combined %>% filter(mclust==4)
+mclu5 <- combined %>% filter(mclust==5)
+mclu6 <- combined %>% filter(mclust==6)
+mclu7 <- combined %>% filter(mclust==7)
+mclu8 <- combined %>% filter(mclust==8)
+mclu9 <- combined %>% filter(mclust==9)
+
+ggmap(boston, fullpage = TRUE,alpha=0.7) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=mclust),size=2)
 
