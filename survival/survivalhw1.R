@@ -67,7 +67,7 @@ pumps_reason_no_survive <- survfit(Surv(hour, fail==1) ~ reason, data=pumps[pump
 #            xlab='Hour',
 #            ylab='Survival Probability',
 #            legend.labs=c('Survived','Flooded','Motor Failure','Surge','Jammed'))
-library("RColorBrewer")
+library(RColorBrewer)
 #display.brewer.all()
 ggsurvplot(pumps_reason_no_survive, data=pumps[pumps$reason != 0,], conf.int=F, 
            palette=brewer.pal(4, "Set1"),
