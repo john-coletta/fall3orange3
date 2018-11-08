@@ -70,9 +70,16 @@ clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
 clusters.s <- hclust(dist(toc),method='single')
 
-plot(clusters.c)
+library(factoextra)
+library(mclust)
+fviz_nbclust(toc, kmeans, method='wss')
+fviz_nbclust(toc, kmeans, method='gap')
+fviz_nbclust(toc, kmeans, method='silhouette')
 
-combined$clus <- cutree(clusters.c,5)
+kmeans_4 <- kmeans(toc,4)
+
+
+combined$clus <- kmeans_4$cluster
 #########################################
 # Get a Map of Boston
 #########################################
@@ -87,15 +94,15 @@ clu1 <- combined %>% filter(clus==1)
 clu2 <- combined %>% filter(clus==2)
 clu3 <- combined %>% filter(clus==3)
 clu4 <- combined %>% filter(clus==4)
-clu5 <- combined %>% filter(clus==5)
 
 
-#notice U of Washington Right in the middle
+
 ggmap(boston, fullpage = TRUE) +
-  geom_point(data = clu3, aes(x = lon, y = lat), color = 'red', size = 2)
+  geom_point(data=clu1, aes(x=lon,y=lat),color='black',size=2) +
+  geom_point(data=clu2, aes(x=lon,y=lat),color='green',size=2) +
+  geom_point(data = clu3, aes(x = lon, y = lat), color = 'red', size = 2) +
+  geom_point(data= clu4, aes(x=lon, y=lat), color='blue', size=2)
 
-ggmap(map2, fullpage = TRUE) +
-  geom_point(data = clu5, aes(x = lon, y = lat), color = 'red', size = 2)
 
 
 ### BELOW CODE IS FOR WORD CLOUD ###
@@ -109,9 +116,6 @@ words3 <- new_reviews %>% ungroup() %>% right_join(clu3,by='listing_id') %>%
   select(word) %>% count(word, sort=T) %>% filter(n<150)
 
 words4 <- new_reviews %>% ungroup() %>% right_join(clu4,by='listing_id') %>%
-  select(word) %>% count(word, sort=T) %>% filter(n<150)
-
-words5 <- new_reviews %>% ungroup() %>% right_join(clu5,by='listing_id') %>%
   select(word) %>% count(word, sort=T) %>% filter(n<150)
 
 library(wordcloud)
@@ -131,8 +135,5 @@ wordcloud(words = words4$word, freq=words4$n, min.freq = 150,
           max.words=100, random.order=F, rot.per=0.35,
           colors=brewer.pal(8, 'Dark2'))
 
-wordcloud(words = words5$word, freq=words5$n, min.freq = 150,
-          max.words=100, random.order=F, rot.per=0.35,
-          colors=brewer.pal(8, 'Dark2'))
 
 
