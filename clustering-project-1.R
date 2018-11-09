@@ -47,6 +47,16 @@ complete <- nwords %>% left_join(score, 'listing_id') %>% mutate(avg=sscore/n)
 complete$avg <- scale(complete$avg)
 
 
+
+listings$pricenum <- as.numeric(gsub('\\$','',listings$price))
+listings$priceperbed <- (listings$pricenum / listings$beds)
+listings$listing_id <- listings$id
+
+
+complete <- complete %>% left_join(listings[,c('listing_id','priceperbed')],by='listing_id') %>%
+  filter(!is.na(priceperbed)) %>% filter(!is.infinite(priceperbed))
+
+complete$pricescale <- scale(complete$priceperbed)
 # uncomment to run
 # retrieves the lat and lon of each listing
 
@@ -64,7 +74,8 @@ combined <- complete %>% left_join(listing_k,by='listing_id')
 combined$std.lat <- scale(combined$lat)
 combined$std.lon <- scale(combined$lon)
 
-toc <- cbind(combined$avg,combined$std.lat,combined$std.lon)
+toc <- cbind(combined$std.lat,combined$std.lon,combined$avg)
+toc2 <- cbind(combined$avg, combined$pricescale)
 
 clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
@@ -73,15 +84,22 @@ clusters.s <- hclust(dist(toc),method='single')
 # The dendograms looked pretty garbage so let's use kmeans
 library(factoextra)
 library(mclust)
-fviz_nbclust(toc, kmeans, method='wss')
-fviz_nbclust(toc, kmeans, method='gap')
-fviz_nbclust(toc, kmeans, method='silhouette')
+fviz_nbclust(toc2, kmeans, method='wss')
+fviz_nbclust(toc2, kmeans, method='gap')
+fviz_nbclust(toc2, kmeans, method='silhouette')
 
 # Four looks decent?
 kmeans_4 <- kmeans(toc,4)
+kmeans_6 <- kmeans(toc,6)
+
+kmeans_3_price <- kmeans(toc2,3)
+kmeans_4_price <- kmeans(toc2,4)
 
 
-combined$clus <- as.factor(kmeans_4$cluster)
+combined$clus_k4 <- as.factor(kmeans_4$cluster)
+combined$clus_k6 <- as.factor(kmeans_6$cluster)
+combined$clus_k3_price <- as.factor(kmeans_3_price$cluster)
+combined$clus_k4_price <- as.factor(kmeans_4_price$cluster)
 #########################################
 # Get a Map of Boston (uses stamenmap instead of google)
 #########################################
@@ -89,15 +107,15 @@ boston <- get_stamenmap(bbox=c(left=-71.201596,bottom=42.221039,right=-70.941457
 ggmap(boston)
 
 # Filter the properites to their clusters
-clu1 <- combined %>% filter(clus==1)
-clu2 <- combined %>% filter(clus==2)
-clu3 <- combined %>% filter(clus==3)
-clu4 <- combined %>% filter(clus==4)
+clu1 <- combined %>% filter(clus_k4==1)
+clu2 <- combined %>% filter(clus_k4==2)
+clu3 <- combined %>% filter(clus_k4==3)
+clu4 <- combined %>% filter(clus_k4==4)
 
 
 
 ggmap(boston, fullpage = TRUE,alpha=0.7) +
-  geom_point(data=combined, aes(x=lon,y=lat,color=clus),size=2) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k3_price),size=2) +
   scale_color_discrete()
 
 
