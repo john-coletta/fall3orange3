@@ -25,7 +25,7 @@ library(dplyr)
 library(text2vec)
 library(readr)
 listings <- read_csv("C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\Clustering\\boston-airbnb-open-data\\listings.csv")
-
+set.seed(42)
 #register_google("[YOUR API KEY HERE]")
 
 nrc_total <- get_sentiments('afinn')
@@ -52,6 +52,8 @@ complete$avgscale <- scale(complete$avg)
 listings$pricenum <- as.numeric(gsub('\\$','',listings$price))
 listings$priceperbed <- (listings$pricenum / listings$beds)
 listings$listing_id <- listings$id
+
+num_reviews <- select(listings, id, reviews_per_month)
 
 # Some values are NA or Inf so drop those
 complete <- complete %>% left_join(listings[,c('listing_id','priceperbed')],by='listing_id') %>%
@@ -86,6 +88,9 @@ combined <- complete %>% left_join(listing_k,by='listing_id')
 combined$std.lat <- scale(combined$lat)
 combined$std.lon <- scale(combined$lon)
 
+combined <- left_join(combined, num_reviews, by = c('listing_id'='id'))
+combined$reviews_scale <- scale(combined$reviews_per_month)
+
 # Using haversine formula to calculate lat long distance
 deg2rad <- function(deg){
   (deg*pi)/(180)
@@ -117,8 +122,8 @@ for(loc in places){
 
 # Below are the various attributes to cluster on
 toc <- cbind(combined$std.lat,combined$std.lon,combined$avgscale,combined$pricescale)
-toc2 <- cbind(combined$avgscale,combined$pricescale,combined$distscale_fenway,combined$distscale_airport,combined$distscale_bunkerhill,
-              combined$distscale_faneuil,combined$distscale_mofa,combined$distscale_oldnorth,combined$distscale_tdcenter)
+toc2 <- combined %>% ungroup() %>% select(avgscale,pricescale,distscale_fenway,distscale_airport,distscale_bunkerhill,
+              distscale_faneuil,distscale_mofa,distscale_oldnorth,distscale_tdcenter,reviews_scale)
 
 clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
@@ -138,10 +143,11 @@ fviz_nbclust(toc2, kmeans, method='silhouette',k.max=20)
 # Four looks decent?
 kmeans_4 <- kmeans(toc,4)
 kmeans_6 <- kmeans(toc,6)
-kmeans_13 <- kmeans(toc2, 13, nstart=25)
+kmeans_9 <- kmeans(toc2, 9, nstart=25)
 
 
-kmeans_13$centers
+
+kmeans_9$centers
 
 # Let's try PCA cause why not
 pca <- princomp(toc2)
@@ -150,23 +156,23 @@ pca$center
 
 plot(pca, type='l')
 # 5 looks like a good elbow
-pca$scores[,1:5]
+pca$scores[,1:6]
 
 
 # kmeans time
-fviz_nbclust(pca$scores[,1:5], kmeans, method='wss',k.max=20)
-fviz_nbclust(pca$scores[,1:5], kmeans, method='gap',k.max=20)
-fviz_nbclust(pca$scores[,1:5], kmeans, method='silhouette',k.max=20)
+fviz_nbclust(pca$scores[,1:6], kmeans, method='wss',k.max=20)
+fviz_nbclust(pca$scores[,1:6], kmeans, method='gap',k.max=20)
+fviz_nbclust(pca$scores[,1:6], kmeans, method='silhouette',k.max=20)
 
-kmeans_8 <- kmeans(pca$scores[,1:5], 8, nstart=25)
+kmeans_10 <- kmeans(pca$scores[,1:6], 10, nstart=25)
 
-kmeans_8$centers
+kmeans_10$centers
 
 
 combined$clus_k4 <- as.factor(kmeans_4$cluster)
 combined$clus_k6 <- as.factor(kmeans_6$cluster)
-combined$clus_k13 <- as.factor(kmeans_13$cluster)
-combined$clus_k8 <- as.factor(kmeans_8$cluster)
+combined$clus_k9 <- as.factor(kmeans_9$cluster)
+combined$clus_k10 <- as.factor(kmeans_10$cluster)
 #### Not sure what the below does, should 'name' the clusters, NOT WORKING #######
 # clusters <- list()
 # for( i in 1:8){
@@ -197,7 +203,7 @@ clu4 <- combined %>% filter(clus_k4==4)
 
 
 ggmap(boston, fullpage = TRUE,alpha=0.7) +
-  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k8),size=2) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k9),size=2) +
   scale_color_discrete()
 
 
