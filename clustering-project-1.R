@@ -45,7 +45,7 @@ score <- new_reviews %>% group_by(listing_id) %>% mutate(sscore=sum(score)) %>% 
 nwords <- new_reviews %>% group_by(listing_id) %>% count(listing_id)
   
 complete <- nwords %>% left_join(score, 'listing_id') %>% mutate(avg=sscore/n)
-complete$avg <- scale(complete$avg)
+complete$avgscale <- scale(complete$avg)
 
 
 # Here we calculate the price per bed for each propety
@@ -116,7 +116,9 @@ for(loc in places){
 }
 
 # Below are the various attributes to cluster on
-toc <- cbind(combined$std.lat,combined$std.lon,combined$avg,combined$pricescale)
+toc <- cbind(combined$std.lat,combined$std.lon,combined$avgscale,combined$pricescale)
+toc2 <- cbind(combined$avgscale,combined$pricescale,combined$distscale_fenway,combined$distscale_airport,combined$distscale_bunkerhill,
+              combined$distscale_faneuil,combined$distscale_mofa,combined$distscale_oldnorth,combined$distscale_tdcenter)
 
 clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
@@ -129,14 +131,57 @@ fviz_nbclust(toc, kmeans, method='wss')
 fviz_nbclust(toc, kmeans, method='gap')
 fviz_nbclust(toc, kmeans, method='silhouette')
 
+fviz_nbclust(toc2, kmeans, method='wss',k.max=20)
+fviz_nbclust(toc2, kmeans, method='gap',k.max=20)
+fviz_nbclust(toc2, kmeans, method='silhouette',k.max=20)
+
 # Four looks decent?
 kmeans_4 <- kmeans(toc,4)
 kmeans_6 <- kmeans(toc,6)
+kmeans_13 <- kmeans(toc2, 13, nstart=25)
+
+
+kmeans_13$centers
+
+# Let's try PCA cause why not
+pca <- princomp(toc2)
+pca$loadings
+pca$center
+
+plot(pca, type='l')
+# 5 looks like a good elbow
+pca$scores[,1:5]
+
+
+# kmeans time
+fviz_nbclust(pca$scores[,1:5], kmeans, method='wss',k.max=20)
+fviz_nbclust(pca$scores[,1:5], kmeans, method='gap',k.max=20)
+fviz_nbclust(pca$scores[,1:5], kmeans, method='silhouette',k.max=20)
+
+kmeans_8 <- kmeans(pca$scores[,1:5], 8, nstart=25)
+
+kmeans_8$centers
 
 
 combined$clus_k4 <- as.factor(kmeans_4$cluster)
 combined$clus_k6 <- as.factor(kmeans_6$cluster)
-
+combined$clus_k13 <- as.factor(kmeans_13$cluster)
+combined$clus_k8 <- as.factor(kmeans_8$cluster)
+#### Not sure what the below does, should 'name' the clusters, NOT WORKING #######
+# clusters <- list()
+# for( i in 1:8){
+#   clusters[[i]] <-  combined %>% ungroup() %>% select(avgscale,pricescale,distscale_airport,distscale_bunkerhill,distscale_fenway,
+#                                         distscale_faneuil,distscale_mofa,distscale_oldnorth,distscale_tdcenter,clus_k8) %>% filter(clus_k8 == i) %>%
+#                               mutate(avg=avgscale) %>% select(-c('avgscale','clus_k8'))
+# }
+# 
+# 
+# # Find the means of each cluster to "Name them"
+# x <- cbind(colMeans(combined %>% ungroup() %>% select(avg,priceperbed,dist_airport,dist_bunkerhill,dist_fenway,
+#                                         dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter)))
+# 
+# X <- cbind(x,t(clusters))
+#################################################################
 #########################################
 # Get a Map of Boston (uses stamenmap instead of google)
 #########################################
@@ -152,7 +197,7 @@ clu4 <- combined %>% filter(clus_k4==4)
 
 
 ggmap(boston, fullpage = TRUE,alpha=0.7) +
-  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k4),size=2) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k8),size=2) +
   scale_color_discrete()
 
 
