@@ -6,7 +6,7 @@
 # also need to download and install rtools off of the internet
 #install.packages('devtools')
 library(devtools)
-devtools::install_github("dkahle/ggmap", ref = "tidyup")
+#devtools::install_github("dkahle/ggmap", ref = "tidyup")
 #####################################################
 #TO DO THIS YOU NEED TO REGISTER TO A GOOGLE DEV ACCOUNT
 #AND PROVIDE YOUR OWN API KEY!!!!!
@@ -32,6 +32,7 @@ nrc_total <- get_sentiments('afinn')
 
 reviews <- read_csv('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\Clustering\\boston-airbnb-open-data\\reviews.csv')
 
+# Below we calculate the sentiment score for each review
 rv <- reviews %>% group_by(listing_id) %>% count(listing_id,sort=T) %>%
   filter(n>=4) %>% select(-'n')
 
@@ -44,19 +45,28 @@ score <- new_reviews %>% group_by(listing_id) %>% mutate(sscore=sum(score)) %>% 
 nwords <- new_reviews %>% group_by(listing_id) %>% count(listing_id)
   
 complete <- nwords %>% left_join(score, 'listing_id') %>% mutate(avg=sscore/n)
-complete$avg <- scale(complete$avg)
+complete$avgscale <- scale(complete$avg)
 
 
-
+# Here we calculate the price per bed for each propety
 listings$pricenum <- as.numeric(gsub('\\$','',listings$price))
 listings$priceperbed <- (listings$pricenum / listings$beds)
 listings$listing_id <- listings$id
 
-
+# Some values are NA or Inf so drop those
 complete <- complete %>% left_join(listings[,c('listing_id','priceperbed')],by='listing_id') %>%
   filter(!is.na(priceperbed)) %>% filter(!is.infinite(priceperbed))
 
 complete$pricescale <- scale(complete$priceperbed)
+
+# Now let us look at distance to popular attractions
+places = c('fenway','oldnorth','tdcenter','faneuil','airport','bunkerhill','mofa')
+lats = c(42.346676,42.366326,42.366136,42.360191,
+         42.366209,42.376310,42.339479)
+lons = c(-71.097221, -71.054485,-71.061865,-71.056198,
+         -71.019709,-71.060775,-71.093892)
+
+places.df <- data.frame(place=places,lat=lats,lon=lons)
 # uncomment to run
 # retrieves the lat and lon of each listing
 
@@ -68,14 +78,47 @@ complete$pricescale <- scale(complete$priceperbed)
 #    lon[ii] <- as.numeric(latLon[1])
 #    lat[ii] <- as.numeric(latLon[2])
 #}
+
+# Get the coords for each property
 listing_k <-data.frame(listing_id = listings$id, lat = listings$latitude, lon = listings$longitude)
 
 combined <- complete %>% left_join(listing_k,by='listing_id')
 combined$std.lat <- scale(combined$lat)
 combined$std.lon <- scale(combined$lon)
 
-toc <- cbind(combined$std.lat,combined$std.lon,combined$avg)
-toc2 <- cbind(combined$avg, combined$pricescale)
+# Using haversine formula to calculate lat long distance
+deg2rad <- function(deg){
+  (deg*pi)/(180)
+}
+
+R <- 6371e3
+for(loc in places){
+  phi1 <- deg2rad(combined$lat)
+
+  phi2 <- deg2rad((places.df %>% filter(place==loc))$lat)
+  
+  delphi <- deg2rad((combined$lat)-(places.df %>% filter(place==loc))$lat)
+  dellam <- deg2rad((combined$lon)-(places.df %>% filter(place==loc))$lon)
+
+  a <- sin(delphi/2) * sin(delphi/2) + cos(phi1) * cos(phi2) * sin(dellam/2) * sin(dellam/2)
+
+  c <- 2 * atan2(sqrt(a),sqrt(1-a))
+  
+  
+  d <- R * c
+  
+  combined$dist <- d
+  combined$distscale <- scale(combined$dist)
+  names(combined)[names(combined) == 'dist'] <- paste('dist',loc,sep='_')
+  names(combined)[names(combined) == 'distscale'] <- paste('distscale',loc,sep='_')
+    
+  
+}
+
+# Below are the various attributes to cluster on
+toc <- cbind(combined$std.lat,combined$std.lon,combined$avgscale,combined$pricescale)
+toc2 <- cbind(combined$avgscale,combined$pricescale,combined$distscale_fenway,combined$distscale_airport,combined$distscale_bunkerhill,
+              combined$distscale_faneuil,combined$distscale_mofa,combined$distscale_oldnorth,combined$distscale_tdcenter)
 
 clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
@@ -84,22 +127,61 @@ clusters.s <- hclust(dist(toc),method='single')
 # The dendograms looked pretty garbage so let's use kmeans
 library(factoextra)
 library(mclust)
-fviz_nbclust(toc2, kmeans, method='wss')
-fviz_nbclust(toc2, kmeans, method='gap')
-fviz_nbclust(toc2, kmeans, method='silhouette')
+fviz_nbclust(toc, kmeans, method='wss')
+fviz_nbclust(toc, kmeans, method='gap')
+fviz_nbclust(toc, kmeans, method='silhouette')
+
+fviz_nbclust(toc2, kmeans, method='wss',k.max=20)
+fviz_nbclust(toc2, kmeans, method='gap',k.max=20)
+fviz_nbclust(toc2, kmeans, method='silhouette',k.max=20)
 
 # Four looks decent?
 kmeans_4 <- kmeans(toc,4)
 kmeans_6 <- kmeans(toc,6)
+kmeans_13 <- kmeans(toc2, 13, nstart=25)
 
-kmeans_3_price <- kmeans(toc2,3)
-kmeans_4_price <- kmeans(toc2,4)
+
+kmeans_13$centers
+
+# Let's try PCA cause why not
+pca <- princomp(toc2)
+pca$loadings
+pca$center
+
+plot(pca, type='l')
+# 5 looks like a good elbow
+pca$scores[,1:5]
+
+
+# kmeans time
+fviz_nbclust(pca$scores[,1:5], kmeans, method='wss',k.max=20)
+fviz_nbclust(pca$scores[,1:5], kmeans, method='gap',k.max=20)
+fviz_nbclust(pca$scores[,1:5], kmeans, method='silhouette',k.max=20)
+
+kmeans_8 <- kmeans(pca$scores[,1:5], 8, nstart=25)
+
+kmeans_8$centers
 
 
 combined$clus_k4 <- as.factor(kmeans_4$cluster)
 combined$clus_k6 <- as.factor(kmeans_6$cluster)
-combined$clus_k3_price <- as.factor(kmeans_3_price$cluster)
-combined$clus_k4_price <- as.factor(kmeans_4_price$cluster)
+combined$clus_k13 <- as.factor(kmeans_13$cluster)
+combined$clus_k8 <- as.factor(kmeans_8$cluster)
+#### Not sure what the below does, should 'name' the clusters, NOT WORKING #######
+# clusters <- list()
+# for( i in 1:8){
+#   clusters[[i]] <-  combined %>% ungroup() %>% select(avgscale,pricescale,distscale_airport,distscale_bunkerhill,distscale_fenway,
+#                                         distscale_faneuil,distscale_mofa,distscale_oldnorth,distscale_tdcenter,clus_k8) %>% filter(clus_k8 == i) %>%
+#                               mutate(avg=avgscale) %>% select(-c('avgscale','clus_k8'))
+# }
+# 
+# 
+# # Find the means of each cluster to "Name them"
+# x <- cbind(colMeans(combined %>% ungroup() %>% select(avg,priceperbed,dist_airport,dist_bunkerhill,dist_fenway,
+#                                         dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter)))
+# 
+# X <- cbind(x,t(clusters))
+#################################################################
 #########################################
 # Get a Map of Boston (uses stamenmap instead of google)
 #########################################
@@ -115,7 +197,7 @@ clu4 <- combined %>% filter(clus_k4==4)
 
 
 ggmap(boston, fullpage = TRUE,alpha=0.7) +
-  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k3_price),size=2) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k8),size=2) +
   scale_color_discrete()
 
 
