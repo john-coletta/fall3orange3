@@ -143,11 +143,20 @@ fviz_nbclust(toc2, kmeans, method='silhouette',k.max=20)
 # Four looks decent?
 kmeans_4 <- kmeans(toc,4)
 kmeans_6 <- kmeans(toc,6)
+set.seed(42)
 kmeans_9 <- kmeans(toc2, 9, nstart=25)
 
 
 
 kmeans_9$centers
+
+cmeans <- colMeans(combined %>% ungroup() %>% select(avg,priceperbed,dist_fenway,dist_airport,dist_bunkerhill,dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter,reviews_per_month))
+csd <- apply(combined %>% ungroup() %>% select(avg,priceperbed,dist_fenway,dist_airport,dist_bunkerhill,dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter,reviews_per_month),
+             2,sd)
+
+
+clusts <- kmeans_9$centers*matrix(csd,byrow=TRUE,nrow=9,ncol=10) + matrix(cmeans,byrow=TRUE,nrow=9,ncol=10)
+
 
 # Let's try PCA cause why not
 pca <- princomp(toc2)
