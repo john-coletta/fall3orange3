@@ -144,7 +144,7 @@ fviz_nbclust(toc2, kmeans, method='silhouette',k.max=20)
 kmeans_4 <- kmeans(toc,4)
 kmeans_6 <- kmeans(toc,6)
 set.seed(42)
-kmeans_9 <- kmeans(toc2, 9, nstart=25)
+kmeans_9 <- kmeans(toc2, 9, iter.max=50)
 
 
 
@@ -216,7 +216,16 @@ ggmap(boston, fullpage = TRUE,alpha=0.7) +
   scale_color_discrete()
 
 
+### OUTPUT DATASET ###
+library(openxlsx)
+wb <- createWorkbook()
+for(i in seq(1,9)){
+  
+  addWorksheet(wb, paste('Segment_',i,sep=''))
+  writeData(wb, sheet = i, (combined %>% filter(clus_k9==i) %>% select(listing_id,clus_k9)))
+}
 
+saveWorkbook(wb, 'airbnb_property_segments.xlsx', overwrite = T)
 ### BELOW CODE IS FOR WORD CLOUD ###
 
 # First get the words for each cluster
