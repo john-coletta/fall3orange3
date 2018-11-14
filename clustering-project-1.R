@@ -156,7 +156,7 @@ csd <- apply(combined %>% ungroup() %>% select(avg,priceperbed,dist_fenway,dist_
 
 
 clusts <- kmeans_9$centers*matrix(csd,byrow=TRUE,nrow=9,ncol=10) + matrix(cmeans,byrow=TRUE,nrow=9,ncol=10)
-
+clusts
 
 # Let's try PCA cause why not
 pca <- princomp(toc2)
