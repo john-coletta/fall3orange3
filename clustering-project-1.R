@@ -69,19 +69,9 @@ lons = c(-71.097221, -71.054485,-71.061865,-71.056198,
          -71.019709,-71.060775,-71.093892)
 
 places.df <- data.frame(place=places,lat=lats,lon=lons)
-# uncomment to run
-# retrieves the lat and lon of each listing
 
-#strtAddress <- listings$street
-#lon<- matrix(0,nrow=length(strtAddress))
-#lat<- matrix(0,nrow=length(strtAddress))
-#for (ii in 1:length(strtAddress)){
-#    latLon <- geocode(strtAddress[ii],output="latlon")
-#    lon[ii] <- as.numeric(latLon[1])
-#    lat[ii] <- as.numeric(latLon[2])
-#}
+### Making the combined dataframe to hold our variables ###
 
-# Get the coords for each property
 listing_k <-data.frame(listing_id = listings$id, lat = listings$latitude, lon = listings$longitude)
 
 combined <- complete %>% left_join(listing_k,by='listing_id')
@@ -121,9 +111,12 @@ for(loc in places){
 }
 
 # Below are the various attributes to cluster on
+# We decided that toc2 produced better clusters
 toc <- cbind(combined$std.lat,combined$std.lon,combined$avgscale,combined$pricescale)
 toc2 <- combined %>% ungroup() %>% select(avgscale,pricescale,distscale_fenway,distscale_airport,distscale_bunkerhill,
               distscale_faneuil,distscale_mofa,distscale_oldnorth,distscale_tdcenter,reviews_scale)
+
+# These are pretty bad
 
 clusters.c <- hclust(dist(toc),method='complete')
 clusters.a <- hclust(dist(toc),method='average')
@@ -132,24 +125,28 @@ clusters.s <- hclust(dist(toc),method='single')
 # The dendograms looked pretty garbage so let's use kmeans
 library(factoextra)
 library(mclust)
+## Clustering with just location, rating, price
 fviz_nbclust(toc, kmeans, method='wss')
 fviz_nbclust(toc, kmeans, method='gap')
 fviz_nbclust(toc, kmeans, method='silhouette')
 
-fviz_nbclust(toc2, kmeans, method='wss',k.max=20)
-fviz_nbclust(toc2, kmeans, method='gap',k.max=20)
-fviz_nbclust(toc2, kmeans, method='silhouette',k.max=20)
+## Clustering with proximity, rating, price, number of reviews
+clusFUN <- function(x, k) {(cluster<-kmeans(x, k, iter.max=50))}
+fviz_nbclust(toc2, FUNcluster=clusFUN, method='wss',k.max=20)
+fviz_nbclust(toc2, FUNcluster=clusFUN, method='gap',k.max=20)
+fviz_nbclust(toc2, FUNcluster=clusFUN, method='silhouette',k.max=20)
 
-# Four looks decent?
+# Various outputs from the clusters, 9 with toc2 looks the best
 kmeans_4 <- kmeans(toc,4)
 kmeans_6 <- kmeans(toc,6)
+
 set.seed(42)
 kmeans_9 <- kmeans(toc2, 9, iter.max=50)
 
-
-
+# Look at the centroids
 kmeans_9$centers
 
+# Unscale them
 cmeans <- colMeans(combined %>% ungroup() %>% select(avg,priceperbed,dist_fenway,dist_airport,dist_bunkerhill,dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter,reviews_per_month))
 csd <- apply(combined %>% ungroup() %>% select(avg,priceperbed,dist_fenway,dist_airport,dist_bunkerhill,dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter,reviews_per_month),
              2,sd)
@@ -177,27 +174,13 @@ kmeans_10 <- kmeans(pca$scores[,1:6], 10, nstart=25)
 
 kmeans_10$centers
 
+# PCA looks kinda crappy
 
 combined$clus_k4 <- as.factor(kmeans_4$cluster)
 combined$clus_k6 <- as.factor(kmeans_6$cluster)
 combined$clus_k9 <- as.factor(kmeans_9$cluster)
 combined$clus_k10 <- as.factor(kmeans_10$cluster)
-#### Not sure what the below does, should 'name' the clusters, NOT WORKING #######
-# clusters <- list()
-# for( i in 1:8){
-#   clusters[[i]] <-  combined %>% ungroup() %>% select(avgscale,pricescale,distscale_airport,distscale_bunkerhill,distscale_fenway,
-#                                         distscale_faneuil,distscale_mofa,distscale_oldnorth,distscale_tdcenter,clus_k8) %>% filter(clus_k8 == i) %>%
-#                               mutate(avg=avgscale) %>% select(-c('avgscale','clus_k8'))
-# }
-# 
-# 
-# # Find the means of each cluster to "Name them"
-# x <- cbind(colMeans(combined %>% ungroup() %>% select(avg,priceperbed,dist_airport,dist_bunkerhill,dist_fenway,
-#                                         dist_faneuil,dist_mofa,dist_oldnorth,dist_tdcenter)))
-# 
-# X <- cbind(x,t(clusters))
-#################################################################
-#########################################
+
 # Get a Map of Boston (uses stamenmap instead of google)
 #########################################
 boston <- get_stamenmap(bbox=c(left=-71.201596,bottom=42.221039,right=-70.941457,top=42.398561),zoom=12)
@@ -210,9 +193,9 @@ clu3 <- combined %>% filter(clus_k4==3)
 clu4 <- combined %>% filter(clus_k4==4)
 
 
-
+## Map for our 9 clusters from toc2
 ggmap(boston, fullpage = TRUE,alpha=0.7) +
-  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k9),size=2) +
+  geom_point(data=combined, aes(x=lon,y=lat,color=clus_k9),size=4) +
   scale_color_discrete()
 
 
@@ -222,11 +205,13 @@ wb <- createWorkbook()
 for(i in seq(1,9)){
   
   addWorksheet(wb, paste('Segment_',i,sep=''))
-  writeData(wb, sheet = i, (combined %>% filter(clus_k9==i) %>% select(listing_id,clus_k9)))
+  writeData(wb, sheet = i, (combined %>% filter(clus_k9==i) %>% left_join(listings, by='listing_id') %>% select(listing_id,listing_url,clus_k9)))
 }
 
 saveWorkbook(wb, 'airbnb_property_segments.xlsx', overwrite = T)
 ### BELOW CODE IS FOR WORD CLOUD ###
+
+# These were not that useful
 
 # First get the words for each cluster
 words1 <- new_reviews %>% ungroup() %>% right_join(clu1,by='listing_id') %>%
@@ -261,6 +246,7 @@ wordcloud(words = words4$word, freq=words4$n, min.freq = 150,
 
 ### BELOW IS THE MCLUST CODE ###
 
+# Mixture models were also kind of crappy so we quickly went a different direction
 # Add back in the distributions
 toc_dist <- combined[,c('sscore','lat','lon')]
 mm_bic <- mclustBIC(toc_dist)
@@ -270,15 +256,6 @@ plot(mclustF)
 
 combined$mclust <- as.factor(mclustF$classification)
 
-mclu1 <- combined %>% filter(mclust==1)
-mclu2 <- combined %>% filter(mclust==2)
-mclu3 <- combined %>% filter(mclust==3)
-mclu4 <- combined %>% filter(mclust==4)
-mclu5 <- combined %>% filter(mclust==5)
-mclu6 <- combined %>% filter(mclust==6)
-mclu7 <- combined %>% filter(mclust==7)
-mclu8 <- combined %>% filter(mclust==8)
-mclu9 <- combined %>% filter(mclust==9)
 
 ggmap(boston, fullpage = TRUE,alpha=0.7) +
   geom_point(data=combined, aes(x=lon,y=lat,color=mclust),size=2)
