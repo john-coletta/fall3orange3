@@ -263,6 +263,13 @@ hist(NPV_units)
 NPV_df <- as.data.frame(NPV_units)
 npv_med <- median(NPV_units)
 
+library(Hmisc)
+describe(NPV)
+describe(Cost_Dry_Well)
+
+sd(NPV)
+sd(Cost_Dry_Well)
+
 library(ggplot2)
 
 ggplot(NPV_df) +
