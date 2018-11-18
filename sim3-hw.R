@@ -15,8 +15,8 @@ library(truncnorm)
 
 set.seed(69)
 simulation.size <- 10000
-hydro.dist <- rtruncnorm(simulation.size,a=0,b=1,mean=0.99,sd=0.05)
-reser.dist <- rtruncnorm(simulation.size,a=0,b=1,mean=0.8,sd=0.1)
+hydro.dist <- numeric()
+reser.dist <- numeric()
 prop.dist <- rep(0,simulation.size)
 
 for(j in seq(simulation.size)){
@@ -31,6 +31,8 @@ for(j in seq(simulation.size)){
   produce <- ifelse(v.produce,1,0)
   
   prop.dist[j] <- mean(produce)
+  hydro.dist <- c(hydro.dist,hydro.risk)
+  reser.dist <- c(reser.dist,reservoir.risk)
 }
 
 hist(prop.dist)  
