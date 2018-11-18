@@ -14,7 +14,7 @@ library(readxl)
 library(truncnorm)
 
 set.seed(69)
-simulation.size <- 10000
+simulation.size <- 100000
 hydro.dist <- numeric()
 reser.dist <- numeric()
 prop.dist <- rep(0,simulation.size)
@@ -35,12 +35,58 @@ for(j in seq(simulation.size)){
   reser.dist <- c(reser.dist,reservoir.risk)
 }
 
-hist(prop.dist)  
-hist(hydro.dist)
-hist(reser.dist)
 
 library(Hmisc)
 describe(prop.dist)
 
 VaR <- quantile(prop.dist, probs=0.05)  
 CVaR <- mean(prop.dist[prop.dist <= VaR])
+
+hist(prop.dist)  
+hist(hydro.dist)
+hist(reser.dist)
+hist(prop.dist[prop.dist <= VaR])
+
+prop.df <- as.data.frame(prop.dist)
+hydro.df <- as.data.frame(hydro.dist)
+reser.df <- as.data.frame(reser.dist)
+
+ggplot(prop.df) +
+  geom_histogram(mapping = aes(prop.dist), bins = 50, colour = "black", fill = "lightblue") +
+  xlab("Projected Proportion of Wet Wells") +
+  ylab("Count") +
+  ggtitle("Simulated Distribution of Wet Well Proportion") +
+  geom_vline(xintercept  = VaR, colour = "red", lwd = 1.25) +
+  #scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = seq(0,1,0.1), limits = c(0,1)) +
+  theme(axis.text.x = element_text(angle = 45))
+
+ggplot(hydro.df) +
+  geom_histogram(mapping = aes(hydro.dist), bins = 50, colour = "black", fill = "lightblue") +
+  xlab("Projected Hydocarbon Risk") +
+  ylab("Count") +
+  ggtitle("Simulated Distribution for Hydrocarbon Risk") +
+  geom_vline(xintercept  = mean(hydro.dist), colour = "red", lwd = 1.25) +
+  #scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = seq(0.8,1,0.1), limits = c(0.8,1)) +
+  theme(axis.text.x = element_text(angle = 45))
+
+ggplot(reser.df) +
+  geom_histogram(mapping = aes(reser.dist), bins = 50, colour = "black", fill = "lightblue") +
+  xlab("Projected Reservoir Risk") +
+  ylab("Count") +
+  ggtitle("Simulated Distribution of Reservoir Risk") +
+  geom_vline(xintercept  = mean(reser.dist), colour = "red", lwd = 1.25) +
+  #scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = seq(0.3,1,0.1), limits = c(0.3,1)) +
+  theme(axis.text.x = element_text(angle = 45))
+
+ggplot(prop.df %>% filter(prop.dist <= VaR)) +
+  geom_histogram(mapping = aes(prop.dist), bins = 50, colour = "black", fill = "lightblue") +
+  xlab("Projected Proportion of Wet Well (Bottom 5th Percentile)") +
+  ylab("Count") +
+  ggtitle("Simulated Distribution for Bottom 5th Percentile of Wet Well Proportion") +
+  geom_vline(xintercept  = CVaR, colour = "red", lwd = 1.25) +
+  #scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = seq(min(prop.dist),VaR + 0.05,0.05), limits = c(min(prop.dist),VaR + 0.05)) +
+  theme(axis.text.x = element_text(angle = 45))
