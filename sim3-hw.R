@@ -13,23 +13,30 @@ library(readxl)
 #install.packages('truncnorm')
 library(truncnorm)
 
+# Set the seed and simulation size
 set.seed(69)
 simulation.size <- 100000
+
+# Initialize the empty vectors to hold simulated values
 hydro.dist <- numeric()
 reser.dist <- numeric()
 prop.dist <- rep(0,simulation.size)
 
 for(j in seq(simulation.size)){
+  # Pull the number of wells
   num.wells <- sample(c(10:30),1,replace=T)
   produce <- rep(0, num.wells)
-  
+  # Calculate the risk for each well
   hydro.risk <- rtruncnorm(num.wells, a=0, b=1, mean=0.99, sd=0.05)
   reservoir.risk <- rtruncnorm(num.wells, a=0, b=1, mean=0.8, sd=0.1)
-
+  
+  # Calculate the probability each well produces
   p.produce <- hydro.risk * reservoir.risk
+  # Calculate whether each well produces or not
   v.produce <- rbernoulli(num.wells,p.produce)
   produce <- ifelse(v.produce,1,0)
   
+  # Get proportion of wet wells and store simulated values
   prop.dist[j] <- mean(produce)
   hydro.dist <- c(hydro.dist,hydro.risk)
   reser.dist <- c(reser.dist,reservoir.risk)
@@ -39,6 +46,7 @@ for(j in seq(simulation.size)){
 library(Hmisc)
 describe(prop.dist)
 
+# Get the 5% VaR and CVaR
 VaR <- quantile(prop.dist, probs=0.05)  
 CVaR <- mean(prop.dist[prop.dist <= VaR])
 
@@ -47,10 +55,12 @@ hist(hydro.dist)
 hist(reser.dist)
 hist(prop.dist[prop.dist <= VaR])
 
+# Make into dataframe for plotting
 prop.df <- as.data.frame(prop.dist)
 hydro.df <- as.data.frame(hydro.dist)
 reser.df <- as.data.frame(reser.dist)
 
+# Pretty plots
 ggplot(prop.df) +
   geom_histogram(mapping = aes(prop.dist), bins = 50, colour = "black", fill = "lightblue") +
   xlab("Projected Proportion of Wet Wells") +
