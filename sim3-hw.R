@@ -15,7 +15,7 @@ library(truncnorm)
 
 # Set the seed and simulation size
 set.seed(69)
-simulation.size <- 10000
+simulation.size <- 100000
 
 ptm <- proc.time()
 # Initialize the empty vectors to hold simulated values
@@ -23,7 +23,13 @@ hydro.dist <- numeric()
 reser.dist <- numeric()
 prop.dist <- rep(0,simulation.size)
 
-for(j in seq(simulation.size)){
+for(j in 1:simulation.size){
+  
+  if(j %% 10000 == 0){
+    print(j)
+    print(proc.time() - ptm)
+  }
+  
   # Pull the number of wells
   num.wells <- sample(c(10:30),1,replace=T)
   produce <- rep(0, num.wells)
@@ -49,13 +55,13 @@ library(Hmisc)
 describe(prop.dist)
 
 # Get the 5% VaR and CVaR
-VaR <- quantile(prop.dist, probs=0.05)  
+VaR <- quantile(prop.dist, probs=0.05)
+VaR
 CVaR <- mean(prop.dist[prop.dist <= VaR])
+CVaR
 
-hist(prop.dist)  
-hist(hydro.dist)
-hist(reser.dist)
-hist(prop.dist[prop.dist <= VaR])
+mean(hydro.dist)
+mean(reser.dist)
 
 # Make into dataframe for plotting
 prop.df <- as.data.frame(prop.dist)
