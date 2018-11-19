@@ -15,8 +15,9 @@ library(truncnorm)
 
 # Set the seed and simulation size
 set.seed(69)
-simulation.size <- 100000
+simulation.size <- 10000
 
+ptm <- proc.time()
 # Initialize the empty vectors to hold simulated values
 hydro.dist <- numeric()
 reser.dist <- numeric()
@@ -42,6 +43,7 @@ for(j in seq(simulation.size)){
   reser.dist <- c(reser.dist,reservoir.risk)
 }
 
+proc.time() - ptm
 
 library(Hmisc)
 describe(prop.dist)
