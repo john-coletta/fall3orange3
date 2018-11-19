@@ -57,11 +57,12 @@ describe(prop.dist)
 # Get the 5% VaR and CVaR
 VaR <- quantile(prop.dist, probs=0.05)
 VaR
-CVaR <- mean(prop.dist[prop.dist <= VaR])
+CVaR <- mean(prop.dist[prop.dist < VaR])
 CVaR
 
 mean(hydro.dist)
 mean(reser.dist)
+median(prop.dist)
 
 # Make into dataframe for plotting
 prop.df <- as.data.frame(prop.dist)
