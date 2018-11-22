@@ -66,6 +66,7 @@ for(i in 1:simulation.size){
 
 PriceProj <- read_excel('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\SimulationRisk\\Priceprojections.xlsx')
 
+# Below calculates the year 0 costs
 Seismic <- 43000*rnorm(simulation.size, mean = 3, sd = .35)
 Leased <- 960*rnorm(simulation.size, mean = 600, sd = 50 )
 Completion <- rnorm(simulation.size, mean = 390000, sd = 50000)
@@ -88,7 +89,7 @@ Overhead2031 <- rtriangle(simulation.size, a = 172000, b = 279500, c = 215000 )
 Overhead2032 <- rtriangle(simulation.size, a = 172000, b = 279500, c = 215000 )
 Overhead2033 <- rtriangle(simulation.size, a = 172000, b = 279500, c = 215000 )
 
-
+# Operating expenses only apply to wet wells
 Operating_exp2019 <- rnorm(simulation.size, mean = 2.25, sd = .3)
 Operating_exp2020 <- rnorm(simulation.size, mean = 2.25, sd = .3)
 Operating_exp2021 <- rnorm(simulation.size, mean = 2.25, sd = .3)
@@ -105,6 +106,7 @@ Operating_exp2031 <- rnorm(simulation.size, mean = 2.25, sd = .3)
 Operating_exp2032 <- rnorm(simulation.size, mean = 2.25, sd = .3)
 Operating_exp2033 <- rnorm(simulation.size, mean = 2.25, sd = .3)
 
+# Dry wells don't have to be completed but do have overhead for year 0
 year_0_Dry <- -(Seismic + Leased + Overhead2018 + Drilling_cost) 
 year_0_Wet <- Seismic + Leased + Completion + Overhead2018 + Drilling_cost
 Severance_tax <- .046
@@ -126,6 +128,7 @@ destandardize <- function(x.std, x){
 }
 
 ################################## choleski continued ####
+# Getting the correlation into the matrix
 
 IP.r <- rlnorm(n=simulation.size, mean= 6, sd=0.28)
 DR.r <- runif(n=simulation.size, min = .15, max = .32)
@@ -138,6 +141,8 @@ final.SB.r <- cbind(destandardize(SB.r[,1], IP.r),
 Prod_mat <- matrix(0, nrow = simulation.size, ncol = 16)
 Rate <- rep(0,16)
 Oil <- rep(0,16)
+
+# This loop gets the production
 for(j in 1:simulation.size){
   Rate[1] = final.SB.r[j,1]
   Prod_mat <- as.data.frame.matrix(Prod_mat)
@@ -148,7 +153,7 @@ for(j in 1:simulation.size){
     
   }
   Prod_mat[j,] <-  Oil
-  if(j %% 50000 == 0){
+  if(j %% 10000 == 0){
     print(j)
   }
 }
@@ -201,3 +206,37 @@ NPV<- (Rev_2019_wet+Rev_2020_wet+Rev_2021_wet+Rev_2022_wet+
          Rev_2031_wet+Rev_2032_wet+Rev_2033_wet)-year_0_Wet
 
 Cost_Dry_Well <- -year_0_Dry
+
+# Below is the hw 3 code 
+#########################
+
+# Get the number of dry and wet wells
+hydro.dist <- numeric()
+reser.dist <- numeric()
+prop.dist <- rep(0,simulation.size)
+
+for(j in 1:simulation.size){
+  
+  if(j %% 10000 == 0){
+    print(j)
+    print(proc.time() - ptm)
+  }
+  
+  # Pull the number of wells
+  num.wells <- sample(c(10:30),1,replace=T)
+  produce <- rep(0, num.wells)
+  # Calculate the risk for each well
+  hydro.risk <- rtruncnorm(num.wells, a=0, b=1, mean=0.99, sd=0.05)
+  reservoir.risk <- rtruncnorm(num.wells, a=0, b=1, mean=0.8, sd=0.1)
+  
+  # Calculate the probability each well produces
+  p.produce <- hydro.risk * reservoir.risk
+  # Calculate whether each well produces or not
+  v.produce <- rbernoulli(num.wells,p.produce)
+  produce <- ifelse(v.produce,1,0)
+  
+  # Get proportion of wet wells and store simulated values
+  prop.dist[j] <- mean(produce)
+  hydro.dist <- c(hydro.dist,hydro.risk)
+  reser.dist <- c(reser.dist,reservoir.risk)
+}
