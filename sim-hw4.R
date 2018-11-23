@@ -14,8 +14,8 @@ library(ggplot2)
 library(scales)
 library(Hmisc)
 
-set.seet(69)
-simulation.size = 10000
+set.seed(69)
+simulation.size = 100000
 
 Drilling <- read_excel('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\SimulationRisk\\Drillingcosts.xlsx')
 
@@ -65,6 +65,8 @@ for(i in 1:simulation.size){
 }
 
 PriceProj <- read_excel('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\SimulationRisk\\Priceprojections.xlsx')
+
+Drilling_cost <- Cost2019 * 1000.0
 
 # Below calculates the year 0 costs
 Seismic <- 43000*rnorm(simulation.size, mean = 3, sd = .35)
@@ -207,19 +209,19 @@ NPV<- (Rev_2019_wet+Rev_2020_wet+Rev_2021_wet+Rev_2022_wet+
 
 Cost_Dry_Well <- -year_0_Dry
 
-# Below is the hw 3 code 
+# Below is the hw 3 code modified to do the final project
 #########################
 
 # Get the number of dry and wet wells
 hydro.dist <- numeric()
 reser.dist <- numeric()
 prop.dist <- rep(0,simulation.size)
+total.npv <- rep(0,simulation.size)
 
 for(j in 1:simulation.size){
   
   if(j %% 10000 == 0){
     print(j)
-    print(proc.time() - ptm)
   }
   
   # Pull the number of wells
@@ -234,9 +236,44 @@ for(j in 1:simulation.size){
   # Calculate whether each well produces or not
   v.produce <- rbernoulli(num.wells,p.produce)
   produce <- ifelse(v.produce,1,0)
+  interim.npv <- 0
+  for(well in produce){
+    if(well==1){
+      interim.npv = interim.npv + sample(NPV,1)
+    }
+    if(well==0){
+      interim.npv = interim.npv - sample(Cost_Dry_Well,1)
+    }
+    total.npv[j] = interim.npv
+  }
+  
   
   # Get proportion of wet wells and store simulated values
   prop.dist[j] <- mean(produce)
   hydro.dist <- c(hydro.dist,hydro.risk)
   reser.dist <- c(reser.dist,reservoir.risk)
 }
+
+total.units <- total.npv / 1000000
+total.df <- as.data.frame(total.units)
+
+med_npv <- median(total.df$total.units)
+med_npv
+VaR.npv <- quantile(total.df$total.units, probs=0.05)
+VaR.npv
+ES.npv <- total.df %>% filter(total.units < VaR.npv) %>% summarise(es=mean(total.units))
+ES.npv
+pct.below0 <- (total.df %>% filter(total.units <=0) %>% summarise(n=n()))/simulation.size
+pct.below0
+
+ggplot(total.df) +
+  geom_histogram(mapping = aes(total.units), bins = 50, colour = "black", fill = "lightblue") +
+  xlab("Projected Net Present Value for Total Project") +
+  ylab("Count") +
+  ggtitle("Simulated Distribution of Project Net Present Value") +
+  geom_vline(xintercept  = VaR.npv, colour = "red", lwd = 1.25) +
+  #scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = seq(-15,400,25), limits = c(-15,400)) +
+  theme(axis.text.x = element_text(angle = 45))
+
+Hmisc::describe(total.df)
