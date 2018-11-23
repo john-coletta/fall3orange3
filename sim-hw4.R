@@ -263,17 +263,29 @@ VaR.npv <- quantile(total.df$total.units, probs=0.05)
 VaR.npv
 ES.npv <- total.df %>% filter(total.units < VaR.npv) %>% summarise(es=mean(total.units))
 ES.npv
-pct.below0 <- (total.df %>% filter(total.units <=0) %>% summarise(n=n()))/simulation.size
-pct.below0
+num.below0 <- total.df %>% filter(total.units <=0) %>% summarise(n=n())
+pct.below0 <- num.below0/simulation.size
 
 ggplot(total.df) +
   geom_histogram(mapping = aes(total.units), bins = 50, colour = "black", fill = "lightblue") +
-  xlab("Projected Net Present Value for Total Project") +
+  xlab("Projected Net Present Value for Total Project (Millions of Dollars)") +
   ylab("Count") +
   ggtitle("Simulated Distribution of Project Net Present Value") +
   geom_vline(xintercept  = VaR.npv, colour = "red", lwd = 1.25) +
+  geom_vline(xintercept = med_npv, color='black',linetype=2, lwd=1.25) +
   #scale_y_continuous(labels = percent_format()) +
   scale_x_continuous(breaks = seq(-15,400,25), limits = c(-15,400)) +
   theme(axis.text.x = element_text(angle = 45))
 
 Hmisc::describe(total.df)
+
+ggplot(total.df %>% filter(total.units < VaR.npv)) +
+  geom_histogram(mapping = aes(total.units), bins = 50, colour = "black", fill = "lightblue") +
+  xlab("Projected Net Present Value for Total Project (Millions of Dollars)") +
+  ylab("Count") +
+  ggtitle("Simulated Distribution of Bottom 5% of Project Net Present Values") +
+  geom_vline(xintercept  = ES.npv$es, colour = "red", lwd = 1.25) +
+  geom_vline(xintercept = 0, color='black',linetype=2) +
+  #scale_y_continuous(labels = percent_format()) +
+  scale_x_continuous(breaks = seq(-25,85,10), limits = c(-15,85)) +
+  theme(axis.text.x = element_text(angle = 45))
