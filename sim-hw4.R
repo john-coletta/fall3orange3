@@ -15,7 +15,7 @@ library(scales)
 library(Hmisc)
 
 set.seed(69)
-simulation.size = 100000
+simulation.size = 500000
 
 Drilling <- read_excel('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\SimulationRisk\\Drillingcosts.xlsx')
 
@@ -220,7 +220,7 @@ total.npv <- rep(0,simulation.size)
 
 for(j in 1:simulation.size){
   
-  if(j %% 10000 == 0){
+  if(j %% 50000 == 0){
     print(j)
   }
   
