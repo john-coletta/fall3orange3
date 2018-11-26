@@ -15,7 +15,8 @@ library(scales)
 library(Hmisc)
 
 set.seed(69)
-simulation.size = 500000
+#simulation.size = 500000
+simulation.size = 10000
 
 Drilling <- read_excel('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\SimulationRisk\\Drillingcosts.xlsx')
 
@@ -134,12 +135,12 @@ destandardize <- function(x.std, x){
 
 IP.r <- rlnorm(n=simulation.size, mean= 6, sd=0.28)
 DR.r <- runif(n=simulation.size, min = .15, max = .32)
-Both.r <- cbind(standardize(IP.r),standardize(DR.r))
+Both.r <- cbind(standardize(DR.r), standardize(IP.r))
 SB.r <- U %*% t(Both.r)
 SB.r <- t(SB.r)
 
-final.SB.r <- cbind(destandardize(SB.r[,1], IP.r), 
-                    destandardize(SB.r[,2], DR.r))
+final.SB.r <- cbind(destandardize(SB.r[,2], IP.r), 
+                    destandardize(SB.r[,1], DR.r))
 Prod_mat <- matrix(0, nrow = simulation.size, ncol = 16)
 Rate <- rep(0,16)
 Oil <- rep(0,16)
@@ -237,6 +238,9 @@ for(j in 1:simulation.size){
   v.produce <- rbernoulli(num.wells,p.produce)
   produce <- ifelse(v.produce,1,0)
   interim.npv <- 0
+  # Here we sample from the above distributions to calculate either the net present value for each wet well
+  # or the cost for each dry well
+  # summing these produces an overall net present value for the project
   for(well in produce){
     if(well==1){
       interim.npv = interim.npv + sample(NPV,1)
@@ -256,7 +260,7 @@ for(j in 1:simulation.size){
 
 total.units <- total.npv / 1000000
 total.df <- as.data.frame(total.units)
-
+# Get the descriptive statistics
 med_npv <- median(total.df$total.units)
 med_npv
 VaR.npv <- quantile(total.df$total.units, probs=0.05)
@@ -265,7 +269,7 @@ ES.npv <- total.df %>% filter(total.units < VaR.npv) %>% summarise(es=mean(total
 ES.npv
 num.below0 <- total.df %>% filter(total.units <=0) %>% summarise(n=n())
 pct.below0 <- num.below0/simulation.size
-
+# Pretty graphs
 ggplot(total.df) +
   geom_histogram(mapping = aes(total.units), bins = 50, colour = "black", fill = "lightblue") +
   xlab("Projected Net Present Value for Total Project (Millions of Dollars)") +
