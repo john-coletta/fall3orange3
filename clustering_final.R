@@ -1,6 +1,7 @@
 load('C:\\Users\\johnb\\OneDrive\\Documents\\MSA\\Fall 3\\Clustering\\final_data.RData')
 
 library(splines)
+library(tidyverse)
 times <- seq(1,295)/100 # Observations in 1/100th of a second
 X <- bs(times,intercept=TRUE,df=60) #create a spline to 
 #model the data
@@ -27,26 +28,38 @@ library(mclust)
 
 clustBIC <- mclustBIC(cdata[,10:20], modelNames='VVV', G=1:20)
 plot(clustBIC)
-
-clustBIC6 <- Mclust(cdata[,8:65], modelNames='VVV', G=6)
+set.seed(12345)
+clustBIC6 <- Mclust(cdata[,10:20], modelNames='VVV', G=6)
 clustBIC6
 
 df <- cdata
 df$clust <- as.factor(clustBIC6$classification)
 
-b1 <- matrix(clustBIC6$parameters$mean[,1],60,1)
-b2 <- matrix(clustBIC6$parameters$mean[,2],60,1)
-b3 <- matrix(clustBIC6$parameters$mean[,3],60,1)
-b4 <- matrix(clustBIC6$parameters$mean[,4],60,1)
-b5 <- matrix(clustBIC6$parameters$mean[,5],60,1)
-b6 <- matrix(clustBIC6$parameters$mean[,6],60,1)
-plot(times, X%*%b1, ylab="ML",xlab = "Time",type = 'l',lwd=2,col=1,ylim=c(0,100))
+clus_means <- df %>% group_by(clust) %>% summarise_all(funs(mean))
+
+b1 <- as.numeric((clus_means %>% filter(clust==1) %>% select(-c('clust','SEQN','AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))))
+b2 <- as.numeric((clus_means %>% filter(clust==2) %>% select(-c('clust','SEQN','AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))))
+b3 <- as.numeric((clus_means %>% filter(clust==3) %>% select(-c('clust','SEQN','AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))))
+b4 <- as.numeric((clus_means %>% filter(clust==4) %>% select(-c('clust','SEQN','AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))))
+b5 <- as.numeric((clus_means %>% filter(clust==5) %>% select(-c('clust','SEQN','AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))))
+b6 <- as.numeric((clus_means %>% filter(clust==6) %>% select(-c('clust','SEQN','AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))))
+
+clus_df <- as.data.frame(cbind(times,X%*%b1,X%*%b2,X%*%b3,X%*%b4,X%*%b5,X%*%b6))
+names(clus_df) <- c('time','clus1','clus2','clus3','clus4','clus5','clus6')
+clus_df <- clus_df %>% gather(key=cluster, value=mL, -time)
+
+ggplot(clus_df, aes(x=time, y=mL, color=cluster)) +
+  geom_line(lwd=1.5) 
+
+plot(times, X%*%b1, ylab="mL",xlab = "Time",type = 'l',lwd=2,col=1,ylim=c(0,100))
 lines(times,X%*%b2,lwd=2,col=2)
 lines(times,X%*%b3,lwd=2,col=3)
 lines(times,X%*%b4,lwd=2,col=4)
 lines(times,X%*%b5,lwd=2,col=5)
 lines(times,X%*%b6,lwd=2,col=6)
 
+clustBIC6$parameters$mean
+b1[5:15]
 
 sfun1 <- splinefun(times,X%*%b1)
 sfun2 <- splinefun(times,X%*%b2)
@@ -61,3 +74,5 @@ integrate(sfun3,min(times),max(times))
 integrate(sfun4,min(times),max(times))
 integrate(sfun5,min(times),max(times))
 integrate(sfun6,min(times),max(times)) #this will find the area under the curve
+
+clus_means %>% filter(clust==4) %>% select(c('AGE','EVER_SMOKE','ASTHMA','POVERTY_RATIO'))
