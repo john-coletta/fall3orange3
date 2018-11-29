@@ -28,6 +28,8 @@ library(mclust)
 
 clustBIC <- mclustBIC(cdata[,10:20], modelNames='VVV', G=1:20)
 plot(clustBIC)
+abline(v=13, lty=2)
+clustBIC
 set.seed(12345)
 clustBIC6 <- Mclust(cdata[,10:20], modelNames='VVV', G=6)
 clustBIC6
@@ -49,7 +51,11 @@ names(clus_df) <- c('time','clus1','clus2','clus3','clus4','clus5','clus6')
 clus_df <- clus_df %>% gather(key=cluster, value=mL, -time)
 
 ggplot(clus_df, aes(x=time, y=mL, color=cluster)) +
-  geom_line(lwd=1.5) 
+  geom_line(lwd=1.25) +
+  xlab('Time (s)') +
+  ylab('Milliliters') +
+  guides(color=guide_legend(title='')) +
+  scale_color_brewer(type='qual',palette='Set2',labels=c('Cluster 1','Cluster 2','Cluster 3','Cluster 4','Cluster 5','Cluster 6'))
 
 plot(times, X%*%b1, ylab="mL",xlab = "Time",type = 'l',lwd=2,col=1,ylim=c(0,100))
 lines(times,X%*%b2,lwd=2,col=2)
